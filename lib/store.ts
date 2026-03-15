@@ -1,5 +1,4 @@
-// lib/store.ts
-// In-memory store simulating a DB with atomic operations
+import { supabaseServer } from './supabase';
 
 export interface Order {
   id: number;
@@ -11,58 +10,77 @@ export interface Order {
   timestamp: number;
 }
 
-interface Store {
-  inventory: number;
-  orders: Order[];
-  orderCounter: number;
-  initialStock: number;
+export async function attemptPurchase(userId: string, userName: string): Promise<Order | null> {
+  try {
+    const result = await supabaseServer.rpc('purchase_item', {
+      p_user_id: userId,
+      p_user_name: userName,
+      p_product: "Gaming Console — Midnight Edition",
+      p_price: 29999
+    });
+
+    if (result.error) {
+      console.error('Purchase error:', result.error);
+      return null;
+    }
+
+    if (!result.data || result.data.length === 0) {
+      return null;
+    }
+
+    const order = result.data[0];
+    return {
+      id: order.id,
+      product: order.product,
+      price: order.price,
+      userId: order.user_id,
+      userName: order.user_name,
+      time: new Date(order.created_at).toLocaleTimeString("en-IN", { hour12: false }),
+      timestamp: new Date(order.created_at).getTime(),
+    };
+  } catch (error) {
+    console.error('Purchase exception:', error);
+    return null;
+  }
 }
 
-// Global store (persists across hot reloads in dev via globalThis)
-const globalStore = globalThis as typeof globalThis & { __dropzone_store__?: Store };
+export async function resetStock(amount = 10) {
+  await supabaseServer.from('orders').delete().neq('id', 0);
 
-if (!globalStore.__dropzone_store__) {
-  globalStore.__dropzone_store__ = {
-    inventory: 10,
-    orders: [],
-    orderCounter: 0,
-    initialStock: 10,
-  };
+  await supabaseServer
+    .from('inventory')
+    .update({
+      available: amount,
+      initial_stock: amount,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', 1);
 }
 
-export const store = globalStore.__dropzone_store__!;
+export async function getStats() {
+  const [inventoryRes, ordersRes] = await Promise.all([
+    supabaseServer.from('inventory').select('*').eq('id', 1).maybeSingle(),
+    supabaseServer.from('orders').select('*').order('created_at', { ascending: false })
+  ]);
 
-// Atomic purchase — returns order or null if out of stock
-export function attemptPurchase(userId: string, userName: string): Order | null {
-  // Atomic check-and-decrement
-  if (store.inventory <= 0) return null;
-  store.inventory--;
-  store.orderCounter++;
-  const order: Order = {
-    id: store.orderCounter,
-    product: "Gaming Console — Midnight Edition",
-    price: 29999,
-    userId,
-    userName,
-    time: new Date().toLocaleTimeString("en-IN", { hour12: false }),
-    timestamp: Date.now(),
-  };
-  store.orders.push(order);
-  return order;
-}
+  const inventory = inventoryRes.data?.available || 0;
+  const initialStock = inventoryRes.data?.initial_stock || 10;
+  const dbOrders = ordersRes.data || [];
 
-export function resetStock(amount = 10) {
-  store.inventory = amount;
-  store.initialStock = amount;
-  store.orders = [];
-  store.orderCounter = 0;
-}
+  const orders = dbOrders.map(o => ({
+    id: o.id,
+    product: o.product,
+    price: o.price,
+    userId: o.user_id,
+    userName: o.user_name,
+    time: new Date(o.created_at).toLocaleTimeString("en-IN", { hour12: false }),
+    timestamp: new Date(o.created_at).getTime(),
+  }));
 
-export function getStats() {
   return {
-    inventory: store.inventory,
-    orders: store.orders,
-    totalOrders: store.orders.length,
-    initialStock: store.initialStock,
+    inventory,
+    orders,
+    totalOrders: orders.length,
+    initialStock,
   };
 }

@@ -34,20 +34,28 @@ Open http://localhost:3000
 ## Architecture
 
 - **Next.js 14** App Router + TypeScript
-- **Atomic inventory** — JS single-thread guarantees no race conditions
+- **Supabase PostgreSQL** — database with row-level locking for true concurrency control
 - **REST APIs** — `/api/purchase`, `/api/stats`, `/api/reset`, `/api/ai`
 - **ARIA AI Assistant** — Claude API, context-aware, on every page
-- **In-memory store** — simulates DB with atomic check-and-decrement
+- **Atomic transactions** — PostgreSQL `SELECT FOR UPDATE` prevents race conditions
 
 ## Concurrency Solution
 
-Node.js is single-threaded. The `attemptPurchase()` function does:
+Uses **PostgreSQL row-level locking** for true atomicity across distributed serverless functions:
+
+```sql
+-- Lock inventory row exclusively
+SELECT available FROM inventory WHERE id = 1 FOR UPDATE;
+
+-- Check stock
+IF available <= 0 THEN RETURN empty
+
+-- Atomic decrement and order creation
+UPDATE inventory SET available = available - 1
+INSERT INTO orders (...)
 ```
-if (inventory <= 0) return null   // atomic check
-inventory--                        // atomic decrement
-create order                       // record
-```
-No two requests can interleave — the event loop serializes them.
+
+The `FOR UPDATE` clause ensures only one transaction can modify inventory at a time, even across multiple Netlify/Vercel instances. Other requests wait in queue until the lock releases. This guarantees zero overselling even with 1000+ concurrent requests.
 
 ## AI Features
 

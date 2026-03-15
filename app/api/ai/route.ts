@@ -3,7 +3,7 @@ import { getStats } from "@/lib/store";
 
 export async function POST(req: NextRequest) {
   const { messages, page } = await req.json();
-  const stats = getStats();
+  const stats = await getStats();
 
   const systemPrompt = `You are ARIA — the AI assistant for DropZone, a flash sale platform built for the ACM MPSTME hackathon.
 Current system state:
@@ -15,10 +15,10 @@ Current system state:
 
 You help users understand:
 - How to buy during the flash sale
-- The queue and inventory system (uses atomic operations to prevent overselling)
+- The queue and inventory system (uses Supabase database with row-level locking to prevent overselling)
 - Order status and history
-- System architecture (Node.js, Next.js, in-memory atomic store, REST APIs)
-- Concurrency handling with JS single-threaded atomic operations
+- System architecture (Next.js, Supabase PostgreSQL, atomic database transactions, REST APIs)
+- Concurrency handling with PostgreSQL SELECT FOR UPDATE row locking
 
 Be concise, friendly, and technically accurate. Keep responses under 3 sentences unless the user asks for technical details.`;
 
@@ -47,10 +47,10 @@ Be concise, friendly, and technically accurate. Keep responses under 3 sentences
     // Fallback smart responses based on keywords
     const lastMsg = (messages[messages.length - 1]?.content || "").toLowerCase();
     let reply = "I'm ARIA, your flash sale AI assistant. Ask me about inventory, orders, or how the system works!";
-    if (lastMsg.includes("stock") || lastMsg.includes("inventory")) reply = `Currently ${stats.inventory} units remain out of ${stats.initialStock}. ${stats.totalOrders} units have been sold. The system uses atomic decrement operations to prevent overselling.`;
-    else if (lastMsg.includes("buy") || lastMsg.includes("purchase")) reply = "Click 'Buy Now' on the flash sale page. The system processes requests atomically — only the first N users get units, everyone else gets a clean rejection.";
+    if (lastMsg.includes("stock") || lastMsg.includes("inventory")) reply = `Currently ${stats.inventory} units remain out of ${stats.initialStock}. ${stats.totalOrders} units have been sold. The system uses PostgreSQL row locking to prevent overselling.`;
+    else if (lastMsg.includes("buy") || lastMsg.includes("purchase")) reply = "Click 'Buy Now' on the flash sale page. The system uses database-level atomic transactions with SELECT FOR UPDATE to ensure only available stock is sold.";
     else if (lastMsg.includes("order")) reply = `${stats.totalOrders} orders have been recorded. Each order has a unique ID, buyer name, and precise timestamp. Check the Orders page for the full list.`;
-    else if (lastMsg.includes("concurren") || lastMsg.includes("atomic")) reply = "Node.js is single-threaded, so JavaScript's event loop provides natural atomicity for our inventory check-and-decrement. No race conditions possible within a single process.";
+    else if (lastMsg.includes("concurren") || lastMsg.includes("atomic")) reply = "The system uses PostgreSQL row-level locking with SELECT FOR UPDATE. This ensures true atomicity across distributed serverless functions, preventing any race conditions.";
     else if (lastMsg.includes("reset")) reply = "Admins can reset inventory from the Admin page. This clears all orders and restores the stock count for a fresh drop.";
     return NextResponse.json({ reply });
   }
