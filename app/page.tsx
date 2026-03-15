@@ -5,18 +5,19 @@ import AIChat from "@/components/AIChat";
 interface Stats { inventory: number; totalOrders: number; initialStock: number; }
 
 export default function HomePage() {
-  const [stats, setStats] = useState<Stats>({ inventory: 10, totalOrders: 0, initialStock: 10 });
+  const [stats, setStats] = useState<Stats | null>(null);
   const [buying, setBuying] = useState(false);
   const [result, setResult] = useState<{ type: "success" | "error"; message: string; orderId?: number } | null>(null);
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
   const [countdown, setCountdown] = useState(10);
   const [dropLive, setDropLive] = useState(false);
   const [pulseStock, setPulseStock] = useState(false);
-  const [watcherCount] = useState(Math.floor(Math.random() * 2000) + 3800);
+  const [watcherCount, setWatcherCount] = useState(0);
 
   useEffect(() => {
     const stored = localStorage.getItem("dz_user");
     if (stored) setUser(JSON.parse(stored));
+    setWatcherCount(Math.floor(Math.random() * 2000) + 3800);
     let t = 10;
     setCountdown(t);
     const interval = setInterval(() => {
@@ -40,7 +41,7 @@ export default function HomePage() {
   }, [fetchStats]);
 
   const buy = async () => {
-    if (!user || buying || stats.inventory <= 0) return;
+    if (!user || buying || !stats || stats.inventory <= 0) return;
     setBuying(true);
     setResult(null);
     try {
@@ -64,9 +65,9 @@ export default function HomePage() {
     setBuying(false);
   };
 
-  const stockPct = stats.initialStock > 0 ? (stats.inventory / stats.initialStock) * 100 : 0;
+  const stockPct = stats && stats.initialStock > 0 ? (stats.inventory / stats.initialStock) * 100 : 0;
   const stockColor = stockPct > 50 ? "#34d399" : stockPct > 20 ? "#fbbf24" : "#f87171";
-  const soldOut = stats.inventory <= 0;
+  const soldOut = stats ? stats.inventory <= 0 : false;
 
   return (
     <div style={{ padding: "2rem", maxWidth: 1100, margin: "0 auto" }}>
@@ -131,14 +132,14 @@ export default function HomePage() {
                 <span style={{
                   fontFamily: "'Orbitron', monospace", fontSize: 17, fontWeight: 700, color: stockColor,
                   animation: pulseStock ? "glow 0.5s ease" : "none", transition: "color 0.4s",
-                }}>{stats.inventory}</span>
+                }}>{stats?.inventory ?? "-"}</span>
               </div>
               <div className="stock-bar">
                 <div className="stock-fill" style={{ width: `${stockPct}%`, background: `linear-gradient(90deg, ${stockColor}, ${stockColor}99)` }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
-                <span style={{ fontSize: 11, color: "var(--muted)" }}>{stats.totalOrders} sold</span>
-                <span style={{ fontSize: 11, color: "var(--muted)" }}>{stats.initialStock} total</span>
+                <span style={{ fontSize: 11, color: "var(--muted)" }}>{stats?.totalOrders ?? "-"} sold</span>
+                <span style={{ fontSize: 11, color: "var(--muted)" }}>{stats?.initialStock ?? "-"} total</span>
               </div>
             </div>
 
@@ -170,10 +171,10 @@ export default function HomePage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <div className="anim-fade anim-delay-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
             {[
-              { val: stats.inventory, lbl: "In Stock", color: stockColor },
-              { val: stats.totalOrders, lbl: "Orders", color: "#818cf8" },
-              { val: stats.initialStock, lbl: "Total Units", color: "var(--muted3)" },
-              { val: `${Math.round((1 - stats.inventory / stats.initialStock) * 100)}%`, lbl: "Sold Out", color: "#fbbf24" },
+              { val: stats?.inventory ?? "-", lbl: "In Stock", color: stockColor },
+              { val: stats?.totalOrders ?? "-", lbl: "Orders", color: "#818cf8" },
+              { val: stats?.initialStock ?? "-", lbl: "Total Units", color: "var(--muted3)" },
+              { val: stats ? `${Math.round((1 - stats.inventory / stats.initialStock) * 100)}%` : "-", lbl: "Sold Out", color: "#fbbf24" },
             ].map(s => (
               <div key={s.lbl} className="stat-card">
                 <div className="stat-val" style={{ color: s.color as string, fontSize: 22 }}>{s.val}</div>
