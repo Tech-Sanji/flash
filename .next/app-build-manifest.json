@@ -20,6 +20,19 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/test/page.js"
+<<<<<<< HEAD
+=======
+    ],
+    "/admin/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/admin/page.js"
+    ],
+    "/orders/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/orders/page.js"
+>>>>>>> ff4044f (update project)
     ]
   }
 }

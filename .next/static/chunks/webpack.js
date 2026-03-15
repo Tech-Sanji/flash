@@ -192,7 +192,11 @@
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	!function() {
+<<<<<<< HEAD
 /******/ 		__webpack_require__.h = function() { return "42c81c13b34deb30"; }
+=======
+/******/ 		__webpack_require__.h = function() { return "8c754619b7912f1d"; }
+>>>>>>> ff4044f (update project)
 /******/ 	}();
 /******/ 	
 /******/ 	/* webpack/runtime/global */
