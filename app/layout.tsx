@@ -13,7 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     const stored = localStorage.getItem("dz_user");
     if (stored) setUser(JSON.parse(stored));
     else if (pathname !== "/login") router.push("/login");
-  }, [pathname]);
+  }, [pathname, router]);
 
   const logout = () => {
     localStorage.removeItem("dz_user");

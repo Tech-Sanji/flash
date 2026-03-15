@@ -86,7 +86,7 @@ export default function AdminPage() {
                   background: sold ? "rgba(239,68,68,0.1)" : "rgba(99,102,241,0.1)",
                   border: `1px solid ${sold ? "rgba(239,68,68,0.22)" : "rgba(99,102,241,0.22)"}`,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 18, transition: "all 0.4s",
+                  transition: "all 0.4s",
                   color: sold ? "#f87171" : undefined,
                   fontWeight: sold ? 700 : undefined,
                   fontSize: sold ? 14 : 18,
